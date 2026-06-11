@@ -1,0 +1,8 @@
+# Four-qubit GHZ state: entanglement chain, sensitive to decoherence.
+circuit ghz4:
+qubits 4
+h q0
+cx q0 q1
+cx q1 q2
+cx q2 q3
+measure all

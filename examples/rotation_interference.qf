@@ -1,0 +1,9 @@
+# Parametric rotations with interference.
+circuit rotation_interference:
+qubits 2
+rx(pi/3) q0
+ry 1.0471975512 q1
+cz q0 q1
+h q0
+h q1
+measure all

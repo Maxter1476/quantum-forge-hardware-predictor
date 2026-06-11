@@ -1,0 +1,10 @@
+# Star-shaped interaction graph: q0 entangles with every other qubit.
+# A linear-chain backend cannot host this natively, so SWAP routing kicks in.
+circuit nonlocal_swap_stress:
+qubits 5
+h q0
+cx q0 q1
+cx q0 q2
+cx q0 q3
+cx q0 q4
+measure all

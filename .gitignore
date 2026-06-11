@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+data/qfhp.db
+data/reports/
+models/*.pkl
+.env
+.DS_Store

@@ -1,0 +1,16 @@
+# Deliberately deep circuit: decoherence and gate error dominate.
+circuit deep_chain:
+qubits 3
+h q0
+cx q0 q1
+cx q1 q2
+rz(pi/4) q2
+cx q1 q2
+cx q0 q1
+h q0
+t q1
+s q2
+cx q0 q1
+cx q1 q2
+h q2
+measure all
