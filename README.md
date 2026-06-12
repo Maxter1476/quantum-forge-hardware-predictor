@@ -11,6 +11,11 @@ through a council of deterministic analysis agents.
 A small internal statevector simulator provides the ideal baseline; the main
 deliverable is the **hardware output prediction layer** on top of it.
 
+Beyond prediction it can also *act*: executable readout-error mitigation
+(`apply_readout_mitigation`), custom hardware profile registration
+(`POST /hardware-profiles`), multi-backend comparison
+(`POST /predict/compare`), and a trainable correction layer.
+
 ## Install
 
 ```bash

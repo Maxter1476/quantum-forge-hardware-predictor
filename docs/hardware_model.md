@@ -36,6 +36,16 @@ interval.
   students what noise does.
 - **pristine-8q** — ring topology with near-fault-tolerant-era parameters.
 
+## Custom profiles (`app/hardware/registry.py`)
+
+Beyond the presets, custom backends can be registered — for example numbers
+transcribed from a real provider's calibration page. `register_profile()`
+(or `POST /hardware-profiles`) validates the JSON against `HardwareProfile`,
+checks that every per-qubit map covers the declared register and that
+coupling edges are in range, then persists it to `data/profiles/<name>.json`.
+Custom profiles appear in `list_profiles()` and work everywhere presets do
+(prediction, training, dashboard). Preset names cannot be shadowed.
+
 ## Topology / transpilation estimator (`app/prediction/transpile.py`)
 
 1. **Layout**: logical qubits sorted by gate usage are greedily placed on

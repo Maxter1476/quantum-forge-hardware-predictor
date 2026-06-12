@@ -66,6 +66,15 @@ Confidence intervals use the normal approximation
 and readout factors), clamped to [0, 100]. ≥85 classifies as *high*,
 60–85 *moderate*, below 60 *low*.
 
+## Readout mitigation (executable)
+
+`app/prediction/mitigation.py` performs confusion-matrix-inversion
+measurement-error mitigation: each measured qubit's predicted distribution is
+multiplied by the inverse of the same asymmetric confusion matrix the engine
+applied, negatives are clipped, and the result is renormalized. The result
+reports TVD-to-ideal before and after so you can verify it helped. Enable
+with `apply_readout_mitigation` on `/predict` or the dashboard checkbox.
+
 ## Honest limitations
 
 - Channels act on the classical output distribution, not the quantum state:

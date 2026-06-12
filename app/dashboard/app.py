@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 
 from app.circuits.dsl import DSLParseError, parse_dsl
-from app.hardware.presets import get_profile, list_profiles
+from app.hardware.registry import get_profile, list_profiles
 from app.storage import db as storage
 from app.utils import service
 
@@ -73,7 +73,13 @@ def _histogram(ideal: dict, predicted: dict, title: str):
     return fig
 
 
-def _run_prediction(shots: int, seed: int | None, use_correction: bool, with_report: bool):
+def _run_prediction(
+    shots: int,
+    seed: int | None,
+    use_correction: bool,
+    with_report: bool,
+    with_mitigation: bool = False,
+):
     s = _state()
     try:
         circuit = parse_dsl(s.dsl)
@@ -86,6 +92,7 @@ def _run_prediction(shots: int, seed: int | None, use_correction: bool, with_rep
             use_correction=use_correction,
             dsl_source=s.dsl,
             generate_report=with_report,
+            apply_readout_mitigation=with_mitigation,
         )
         s.last_run = payload
         st.success(
@@ -136,13 +143,14 @@ def page_prediction():
     s = _state()
     st.header("Output Prediction")
     st.caption(f"Circuit from editor; backend: **{s.backend}**")
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     shots = col1.number_input("Shots", 16, 100000, 2048)
     seed = col2.number_input("Seed", 0, 10_000, 7)
     use_corr = col3.checkbox("Use trained correction model")
     with_report = col4.checkbox("Generate Markdown report", value=True)
+    with_mitigation = col5.checkbox("Apply readout mitigation")
     if st.button("Run prediction", type="primary"):
-        _run_prediction(int(shots), int(seed), use_corr, with_report)
+        _run_prediction(int(shots), int(seed), use_corr, with_report, with_mitigation)
     if s.last_run:
         r = s.last_run["result"]
         st.pyplot(
@@ -155,6 +163,21 @@ def page_prediction():
         st.subheader("Predicted counts")
         st.json(r["predicted_counts"])
         st.metric("Reliability score", f"{r['reliability_score']}/100")
+        mit = s.last_run.get("readout_mitigation")
+        if mit:
+            st.subheader("Readout mitigation")
+            st.pyplot(
+                _histogram(
+                    r["ideal_probabilities"],
+                    mit["mitigated_probabilities"],
+                    "Ideal vs mitigated output",
+                )
+            )
+            st.write(
+                f"TVD to ideal: {mit['tvd_to_ideal_before']} -> "
+                f"{mit['tvd_to_ideal_after']} "
+                f"(improvement {mit['improvement']})"
+            )
         if r["explanations"]:
             st.subheader("Engine notes")
             for e in r["explanations"]:

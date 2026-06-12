@@ -63,6 +63,26 @@ Same body as `/predict`; additionally renders a Markdown report, saves it to
 `data/reports/<id>.md` and the `generated_reports` table, and returns
 `report_id` + `report_markdown`.
 
+## `POST /predict/compare`
+Predict one circuit on up to 10 backends side by side. Body:
+`{"dsl": ..., "backends": ["toy-2q", "pristine-8q"], "shots": 1024, "seed": 2}`.
+Rows are sorted by reliability; backends that cannot host the circuit return
+an `error` field instead of failing the whole call.
+
+## `POST /hardware-profiles`
+Register a custom backend (e.g. transcribed real calibration data). Body:
+`{"profile": {<HardwareProfile JSON>}, "overwrite": false}` → 201 with the
+profile summary. Validates name, per-qubit map completeness, and coupling
+edges; built-in preset names cannot be replaced. Custom profiles persist as
+JSON in `data/profiles/` and are usable everywhere a preset is.
+
+## Readout mitigation flag
+`POST /predict` and `POST /predict/report` accept
+`"apply_readout_mitigation": true`, which inverts the per-qubit confusion
+matrices on the predicted distribution and adds a `readout_mitigation` block:
+`{"mitigated_probabilities": ..., "tvd_to_ideal_before": ...,
+"tvd_to_ideal_after": ..., "improvement": ...}`.
+
 ## `POST /train/synthetic`
 Body: `{"backend": "toy-5q", "num_examples": 60, "shots": 1024,
 "model_type": "random_forest", "seed": 0}` → training metrics and the saved

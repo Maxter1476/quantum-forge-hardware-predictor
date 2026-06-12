@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.circuits.dsl import DSLParseError
-from app.hardware.presets import get_profile, list_profiles
+from app.hardware.registry import get_profile, list_profiles, register_profile
 from app.storage import db as storage
 from app.utils import service
 
@@ -44,6 +44,20 @@ class PredictRequest(BaseModel):
     shots: int = Field(default=1024, ge=1, le=1_000_000)
     seed: int | None = None
     use_correction: bool = False
+    apply_readout_mitigation: bool = False
+
+
+class CompareRequest(BaseModel):
+    dsl: str | None = None
+    ir: dict[str, Any] | None = None
+    backends: list[str] = Field(min_length=1, max_length=10)
+    shots: int = Field(default=1024, ge=1, le=1_000_000)
+    seed: int | None = None
+
+
+class RegisterProfileRequest(BaseModel):
+    profile: dict[str, Any]
+    overwrite: bool = False
 
 
 class TrainRequest(BaseModel):
@@ -76,6 +90,16 @@ def hardware_profile(name: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@app.post("/hardware-profiles", status_code=201)
+def create_hardware_profile(req: RegisterProfileRequest) -> dict[str, Any]:
+    """Register a custom backend, e.g. transcribed real calibration data."""
+    try:
+        profile = register_profile(req.profile, overwrite=req.overwrite)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"registered": profile.backend_name, "summary": profile.summary()}
+
+
 @app.post("/circuits/parse")
 def parse_circuit(req: ParseRequest) -> dict[str, Any]:
     try:
@@ -102,6 +126,7 @@ def _run(req: PredictRequest, generate_report: bool) -> dict[str, Any]:
             use_correction=req.use_correction,
             dsl_source=req.dsl or "",
             generate_report=generate_report,
+            apply_readout_mitigation=req.apply_readout_mitigation,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -115,6 +140,21 @@ def predict(req: PredictRequest) -> dict[str, Any]:
 @app.post("/predict/report")
 def predict_with_report(req: PredictRequest) -> dict[str, Any]:
     return _run(req, generate_report=True)
+
+
+@app.post("/predict/compare")
+def predict_compare(req: CompareRequest) -> dict[str, Any]:
+    """Predict one circuit on several backends, sorted by reliability."""
+    try:
+        circuit = service.resolve_circuit(dsl=req.dsl, ir=req.ir)
+        rows = service.compare_backends(
+            circuit, req.backends, shots=req.shots, seed=req.seed
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (DSLParseError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"circuit": circuit.summary(), "comparison": rows}
 
 
 @app.post("/train/synthetic")

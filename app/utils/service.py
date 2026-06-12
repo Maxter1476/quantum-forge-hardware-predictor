@@ -11,11 +11,12 @@ from typing import Any
 from app.agents.council import CouncilEngine, CouncilReport
 from app.circuits.dsl import parse_dsl
 from app.circuits.ir import CircuitIR
-from app.hardware.presets import get_profile
+from app.hardware.registry import get_profile
 from app.hardware.profile import HardwareProfile
 from app.learning.correction import CorrectionModel
 from app.learning.synthetic import generate_dataset
 from app.prediction.engine import HardwarePredictionEngine, PredictionResult
+from app.prediction.mitigation import mitigate_readout
 from app.reports.markdown import generate_prediction_report, save_report
 from app.storage import db as storage
 
@@ -62,6 +63,7 @@ def run_prediction(
     dsl_source: str = "",
     persist: bool = True,
     generate_report: bool = False,
+    apply_readout_mitigation: bool = False,
 ) -> dict[str, Any]:
     """Run the full pipeline; returns result, council, and optional report."""
     engine = HardwarePredictionEngine()
@@ -70,6 +72,9 @@ def run_prediction(
         circuit, profile, shots=shots, seed=seed, correction_model=correction
     )
     council = CouncilEngine().convene(circuit, profile, result)
+    mitigation = (
+        mitigate_readout(result, profile) if apply_readout_mitigation else None
+    )
 
     run_id = None
     report_id = None
@@ -87,10 +92,46 @@ def run_prediction(
         "result": result.model_dump(),
         "council": council.model_dump(),
     }
+    if mitigation is not None:
+        payload["readout_mitigation"] = mitigation
     if markdown is not None:
         payload["report_id"] = report_id
         payload["report_markdown"] = markdown
     return payload
+
+
+def compare_backends(
+    circuit: CircuitIR,
+    backend_names: list[str],
+    shots: int = 1024,
+    seed: int | None = None,
+) -> list[dict[str, Any]]:
+    """Predict the same circuit on several backends for side-by-side review.
+
+    Backends that cannot host the circuit (too few qubits) are reported with
+    an error message instead of failing the whole comparison.
+    """
+    engine = HardwarePredictionEngine()
+    rows: list[dict[str, Any]] = []
+    for name in backend_names:
+        profile = get_profile(name)
+        try:
+            result = engine.predict(circuit, profile, shots=shots, seed=seed)
+        except ValueError as exc:
+            rows.append({"backend": name, "error": str(exc)})
+            continue
+        rows.append(
+            {
+                "backend": name,
+                "reliability_score": result.reliability_score,
+                "predicted_probabilities": result.predicted_probabilities,
+                "dominant_error_sources": result.dominant_error_sources,
+                "added_swap_count": result.mapping.added_swap_count,
+                "estimated_duration_us": result.estimated_duration_us,
+            }
+        )
+    rows.sort(key=lambda r: -(r.get("reliability_score") or -1))
+    return rows
 
 
 def _persist_run(

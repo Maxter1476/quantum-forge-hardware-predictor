@@ -91,3 +91,23 @@
 - **Known limitations:** see `docs/noise_model.md` § honest limitations.
 - **Next step:** see README "next improvements" candidates — real-hardware
   calibration ingestion, SABRE-style routing, per-bitstring correction.
+
+## 2026-06-11 — Increment 2: mitigation, custom profiles, comparison
+
+- **Files changed:** `app/prediction/mitigation.py` (new),
+  `app/hardware/registry.py` (new), `app/utils/service.py`,
+  `app/api/main.py`, `app/dashboard/app.py`, docs.
+- **Feature added:** executable readout-error mitigation via per-qubit
+  confusion-matrix inversion with before/after TVD-to-ideal reporting
+  (`apply_readout_mitigation` on predict endpoints + dashboard checkbox);
+  custom hardware profile registry persisting validated JSON to
+  `data/profiles/` with `POST /hardware-profiles`; multi-backend comparison
+  endpoint `POST /predict/compare` sorted by reliability and tolerant of
+  too-small backends.
+- **Tests added:** `tests/test_mitigation_registry.py` (11) — suite now 58.
+- **Known limitations:** mitigation inverts the *modeled* confusion matrix,
+  so on synthetic predictions it is near-oracle; on real data the matrix
+  would need to be measured. Registry accepts JSON only (no provider API
+  ingestion yet).
+- **Next step:** SABRE-style routing, per-bitstring learned correction,
+  density-matrix validation engine.
