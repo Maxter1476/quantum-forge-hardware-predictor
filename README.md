@@ -1,6 +1,6 @@
 # Quantum Forge Hardware Predictor
 
-An AI-assisted **hardware-level quantum circuit output prediction system**.
+A physics-based **hardware-level quantum circuit output prediction system**.
 
 Given a quantum circuit and a target hardware profile, it predicts what a
 *real quantum processor* would output — not the textbook answer. It models
