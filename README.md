@@ -1,5 +1,7 @@
 # Quantum Forge Hardware Predictor
 
+![CI](https://github.com/Maxter1476/quantum-forge-hardware-predictor/actions/workflows/ci.yml/badge.svg)
+
 A physics-based **hardware-level quantum circuit output prediction system**.
 
 Given a quantum circuit and a target hardware profile, it predicts what a
